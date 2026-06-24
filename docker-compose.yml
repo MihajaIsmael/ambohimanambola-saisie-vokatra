@@ -1,0 +1,10 @@
+
+services:
+  saisie_vokatra_app:
+    build: .
+    container_name: saisie_vokatra_app
+    ports:
+      - "8087:80"
+    volumes:
+      - .:/var/www/html
+    restart: always
