@@ -149,7 +149,7 @@
 <body>
 
     <div class="container">
-        <h2>Nouveau Ticket POS80</h2>
+        <h2>Fandraisana vokatra</h2>
         <form action="src/print.php" method="POST">
 
             <div class="search-container">
@@ -165,7 +165,7 @@
             </div>
 
             <div class="form-group">
-                <label>Produits :</label>
+                <label>Vokatra :</label>
                 <div id="products_container">
                     <div class="product-row">
                         <input type="text" name="products[0][name]" placeholder="Nom du produit" required>
@@ -174,10 +174,10 @@
                         <button type="button" class="btn-remove" onclick="removeRow(this)">X</button>
                     </div>
                 </div>
-                <button type="button" class="btn-add" onclick="addRow()">+ Ajouter un produit</button>
+                <button type="button" class="btn-add" onclick="addRow()">+ Hanampy vokatra</button>
             </div>
 
-            <button type="submit" class="submit-btn">Générer et Imprimer</button>
+            <button type="submit" style="width: 100%; margin-top: 20px; font-size: 16px;">Hamoahana rosia</button>
         </form>
     </div>
 
