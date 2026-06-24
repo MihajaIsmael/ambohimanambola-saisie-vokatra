@@ -5,6 +5,9 @@ services:
     container_name: saisie_vokatra_app
     ports:
       - "8087:80"
+    dns:
+      - 8.8.8.8
+      - 8.8.4.4
     volumes:
       - .:/var/www/html
     restart: always

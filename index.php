@@ -97,21 +97,37 @@
     </div>
 
     <script>
-        // Simulation d'une recherche AJAX dans Rukovoditel
+        // Search user from Rukovoditel API via AJAX
         const searchInput = document.getElementById('search_user');
         searchInput.addEventListener('input', function() {
             const query = this.value;
-            if (query.length > 2) {
-                // Ici, on appelle notre passerelle PHP vers Rukovoditel
+            if(query.length > 2) {
+                // Fetch data from the local API gateway
                 fetch('src/api/getUser.php?q=' + encodeURIComponent(query))
-                    .brhen(response => response.json())
-                    .brhen(data => {
-                        if (data.length > 0) {
-                            // Pour l'exemple, on prend le premier résultat trouvé
+                    .then(response => response.json())
+                    .then(data => {
+                        const monitor = document.getElementById('user_selected_moniteur');
+                        
+                        // Check if the API returned an error structure instead of a list
+                        if (data.status === 'error') {
+                            monitor.style.color = 'red';
+                            monitor.innerText = "Error: " + data.message;
+                            return;
+                        }
+
+                        // Standard behavior if users are found
+                        if(data.length > 0) {
+                            monitor.style.color = 'green';
                             document.getElementById('user_id').value = data[0].id;
                             document.getElementById('user_name').value = data[0].name;
-                            document.getElementById('user_selected_moniteur').innerText = "Sélectionné : " + data[0].name + " (ID: " + data[0].id + ")";
+                            monitor.innerText = "Sélectionné : " + data[0].name + " (ID: " + data[0].id + ")";
+                        } else {
+                            monitor.style.color = 'orange';
+                            monitor.innerText = "Aucun utilisateur trouvé.";
                         }
+                    })
+                    .catch(err => {
+                        console.error("Fetch execution error:", err);
                     });
             }
         });
