@@ -1,23 +1,39 @@
-# On part d'une image PHP officielle stable avec Apache
+# --- STEP 1 : The Builder ---
+FROM php:8.2-apache AS builder
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    unzip \
+    git \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
+ENV COMPOSER_ALLOW_SUPERUSER=1
+
+WORKDIR /app
+COPY composer.json composer.lock* ./
+RUN if [ -f "composer.json" ]; then \
+    composer install --no-interaction --no-plugins --no-scripts --no-dev --optimize-autoloader; \
+    fi
+
+# --- STEP 2 : The Final Production Image ---
 FROM php:8.2-apache
 
-# Installer les extensions PHP nécessaires si besoin (ex: curl pour l'API Rukovoditel)
-RUN apt-get update && apt-get install -y \
+RUN apt-get update && apt-get install -y --no-install-recommends \
     libcurl4-openssl-dev \
-    && docker-php-ext-install curl
+    libssl-dev \
+    && rm -rf /var/lib/apt/lists/* \
+    && docker-php-ext-install -j$(nproc) curl \
+    && pecl install mongodb \
+    && docker-php-ext-enable mongodb
 
-# Install the required MySQL driver extension for PDO
-RUN docker-php-ext-install pdo_mysql
-
-# Activer le module de réécriture d'Apache (toujours utile)
 RUN a2enmod rewrite
 
-# Copier le code de notre application dans le dossier web d'Apache
+WORKDIR /var/www/html
+
+# On récupère le dossier vendor généré à l'étape 1
+COPY --from=builder /app/vendor /var/www/html/vendor
+# On copie le reste du code
 COPY . /var/www/html/
-WORKDIR /var/www/html/
 
-# Donner les bons droits d'accès aux fichiers
 RUN chown -R www-data:www-data /var/www/html
-
-# L'application écoutera sur le port 80
 EXPOSE 80

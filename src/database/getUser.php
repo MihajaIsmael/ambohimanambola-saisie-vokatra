@@ -13,22 +13,41 @@ if (empty($search)) {
 }
 
 try {
-    // Acquire the single professional PDO connection instance
-    $pdo = Database::getConnection();
+    // Get MongoDB instance
+    $db = Database::getDb();
 
-    // Prepare an optimized SQL query leveraging the name index
-    $stmt = $pdo->prepare("SELECT id, name FROM mpivavaka WHERE name LIKE :search LIMIT 20");
-    
-    // Explicit binding prevents structural SQL Injection vulnerabilities
-    $stmt->execute(['search' => '%' . $search . '%']);
-    $results = $stmt->fetchAll();
+    $searchEscaped = preg_quote($search, '/');
 
-    // Standard structural response mapping for the client frontend
+    $filter = [
+        'name' => [
+            '$regex'   => $searchEscaped,
+            '$options' => 'i'
+        ]
+    ];
+
+    // Limit results
+    $options = [
+        'limit' => 20
+    ];
+
+    // Execute search on "mpivavaka" collection
+    $cursor = $db->mpivavaka->find($filter, $options);
+
+    $results = [];
+    foreach ($cursor as $document) {
+        // Map the result to return 'id' and 'name'
+        $results[] = [
+            'id'   => (string)$document['id'],
+            'name' => $document['name']
+        ];
+    }
+
+    // Send structured response to frontend
     echo json_encode($results);
 
-} catch (PDOException $e) {
-    error_log("Query Execution Error: " . $e->getMessage());
-    
+} catch (Exception $e) {
+    error_log("MongoDB Query Execution Error: " . $e->getMessage());
+
     header('Content-Type: application/json', true, 500);
     echo json_encode([
         'status'  => 'error',

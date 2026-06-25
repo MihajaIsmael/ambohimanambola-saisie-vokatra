@@ -1,48 +1,68 @@
 <?php
 // src/database/Database.php
 
-class Database 
+require_once __DIR__ . '/../../vendor/autoload.php';
+
+class Database
 {
-    private static ?PDO $instance = null;
+    // Singleton for MongoDB client
+    private static ?MongoDB\Client $instance = null;
 
     /**
-     * Instantiates and returns a secure PDO database connection instance (Singleton Pattern)
-     *
-     * @return PDO
+     * Instancie et retourne une connexion client MongoDB unique (Pattern Singleton)
+     * 
+     * @return MongoDB\Client
      */
-    public static function getConnection(): PDO
+    public static function getConnection(): MongoDB\Client
     {
         if (self::$instance === null) {
-            // Docker internal network configurations
-            $host     = getenv('DB_HOST') ?: 'db'; 
-            $dbname   = getenv('DB_NAME');
-            $username = getenv('DB_ROOT_USER');
-            $password = getenv('DB_ROOT_PASSWORD');
-            
+            $host = getenv('DB_HOST') ?: 'mongodb';
+            $port = getenv('DB_PORT') ?: '27017';
+
             try {
-                self::$instance = new PDO(
-                    "mysql:host=$host;dbname=$dbname;charset=utf8mb4",
-                    $username,
-                    $password,
-                    [
-                        PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
-                        PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
-                        PDO::ATTR_EMULATE_PREPARES   => false, // True prepared statements for security
-                    ]
-                );
-            } catch (PDOException $e) {
-                // Professional safety: Log the real error on the server, but hide credentials from the client
-                error_log("Database Connection Failure: " . $e->getMessage());
-                
-                header('Content-Type: application/json', true, 500);
-                echo json_encode([
-                    'status'  => 'error',
-                    'message' => 'Internal Server Error: Unable to connect to the storage engine.'
-                ]);
-                exit;
+                $connectionUri = "mongodb://{$host}:{$port}";
+
+                // OPTIMIZATION : Adding performance options for the Driver (Timeout at 3s)
+                $driverOptions = [
+                    'serverSelectionTimeoutMS' => 3000, 
+                    'connectTimeoutMS'         => 3000
+                ];
+
+                self::$instance = new MongoDB\Client($connectionUri, [], $driverOptions);
+
+                // Ping validation
+                self::$instance->selectDatabase('admin')->command(['ping' => 1]);
+            } catch (Exception $e) {
+                error_log("MongoDB Connection Failure: " . $e->getMessage());
+
+                // Avoid sending JSON headers if the script is called via CLI (ex: your sync scripts)
+                if (php_sapi_name() !== 'cli') {
+                    header('Content-Type: application/json', true, 500);
+                    echo json_encode([
+                        'status'  => 'error',
+                        'message' => 'Internal Server Error: Unable to connect to the MongoDB storage engine.'
+                    ]);
+                    exit(1);
+
+                } else {
+                    fwrite(STDERR, "MongoDB Connection Failure: " . $e->getMessage() . "\n");
+                    exit(1);
+                }
             }
         }
 
         return self::$instance;
+    }
+
+    /**
+     * Fast Helper to get the main database
+     * 
+     * @return MongoDB\Database
+     */
+    public static function getDb(): MongoDB\Database
+    {
+        // MAJOR CORRECTION : Replacement of the fallback by ruko-database to match with the .sh script
+        $databaseName = getenv('DB_NAME') ?: 'ruko-database';
+        return self::getConnection()->selectDatabase($databaseName);
     }
 }
