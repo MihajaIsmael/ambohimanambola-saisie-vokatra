@@ -150,11 +150,11 @@
 
     <div class="container">
         <h2>Fandraisana vokatra</h2>
-        <form action="src/print.php" method="POST">
+        <form action="src/print.php" method="POST" target="print_popup" onsubmit="openPrintPopup();">
 
             <div class="search-container">
                 <label for="user-search">Rechercher un Mpivavaka :</label>
-                <input type="text" id="user-search" class="search-input" autocomplete="off" placeholder="Tapez les premières lettres...">
+                <input type="text" id="user-search" name="user_name" class="search-input" autocomplete="off" placeholder="Tapez les premières lettres...">
                 <input type="hidden" id="selected-user-id" name="user_id">
                 <div id="suggestions-list" class="suggestions-dropdown"></div>
             </div>
@@ -276,6 +276,17 @@
             if (rows.length > 1) {
                 btn.parentElement.remove();
             }
+        }
+
+        function openPrintPopup() {
+            // Define the dimensions and features of the POS80 print window
+            const width = window.screen.width - (window.screen.width / 4);
+            const height = window.screen.height - (window.screen.height / 4);
+            const left = (window.screen.width / 2) - (width / 2);
+            const top = (window.screen.height / 2) - (height / 2);
+            
+            // Open a blank window with the correct name and specifications before the form submits into it
+            window.open('', 'print_popup', `width=${width},height=${height},top=${top},left=${left},status=no,toolbar=no,menubar=no,scrollbars=yes`);
         }
     </script>
 </body>
