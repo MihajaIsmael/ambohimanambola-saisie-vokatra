@@ -3,6 +3,7 @@
 // Include utilities and the dedicated Barcode Service
 include_once __DIR__ . '/utils.php';
 include_once __DIR__ . '/services/BarcodeService.php';
+include_once __DIR__ . '/../vendor/autoload.php';
 
 use App\Services\BarcodeService;
 
@@ -14,41 +15,67 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 
 // 1. Data retrieval and sanitization
 $userId = array_get_default($_POST, 'user_id', 'Unknown');
-$userName = array_get_default($_POST, 'user_name', 'Unknown');
+$userName = array_get_default($_POST, 'user_name', 'Iza ?');
+$eventName = array_get_default($_POST, 'event_name', 'Vokatra');
 $productsInput = array_get_default($_POST, 'products', []);
 $date = date('d/m/Y H:i');
 
-// Hardcoded Event ID for the current session mapping (aligned with your barcode rule)
+// Hardcoded Event ID for the current session mapping
 // TODO For future version, user can make this dynamic
-$eventId = "06"; 
+$eventId = "06";
 
-$receiptProducts = []; // Stores aggregated data for the global supplier receipt
-$labelsToPrint = [];   // Stores individual item data for the price tags pile
-
-// Global sequential counter to ensure structural EAN-13 uniqueness within this batch
+$receiptProducts = [];
+$labelsToPrint = [];
 $itemCounter = 1;
 
-// 2. Process products input matrix
-foreach ($productsInput as $prod) {
-    // Populate the global receipt overview array
+// 2. Process products input matrix and generate data
+$mongoClient = new MongoDB\Client($_ENV['MONGO_URI'] ?? 'mongodb://localhost:27017');
+$db = $mongoClient->selectDatabase($_ENV['DB_NAME']);
+$productCounter = 1;
+foreach ($productsInput as $product) {
     $receiptProducts[] = [
-        'name' => array_get_default($prod, 'name', 'Unknown'),
-        'qty'  => (int)array_get_default($prod, 'qty', 0)
+        'name' => array_get_default($product, 'name', 'Unknown'),
+        'qty'  => (int) array_get_default($product, 'qty', 0),
+        'price'  => (float) array_get_default($product, 'price', 0),
     ];
 
-    // Delegate label generation to the unified BarcodeService architecture
-    // This injects both 'product_code' (7 digits) and 'barcode' (13 digits) to each label
-    $generatedLabels = BarcodeService::generateProductLabels(
-        $prod,
-        $eventId,
-        $userId,
-        $itemCounter
-    );
-    
-    // Merge the newly generated labels into our main printing queue pile
+    $generatedLabels = BarcodeService::generateProductLabels($product, $userId, $productCounter);
     $labelsToPrint = array_merge($labelsToPrint, $generatedLabels);
 }
 
-// 3. Render the view template
-// All variables defined above ($userId, $receiptProducts, $labelsToPrint, etc.) are available in the view.
+// 3. MongoDB Persistence Layer
+if (! empty($labelsToPrint)) {
+    try {
+        // Establish connection to MongoDB
+        $collection = $db->selectCollection($_ENV['COLLECTION_NAME']);
+
+        $documentsToInsert = [];
+        foreach ($labelsToPrint as $label) {
+            $documentsToInsert[] = [
+                'barcode'      => $label['barcode'],      // 13 digits string
+                'product_code' => $label['product_code'], // 7 digits string
+                'name'         => $label['name'],         // Product label / designation
+                'price'        => (float) $label['price'], // Price numeric
+                'printed_at'   => new MongoDB\BSON\UTCDateTime(),
+                'user_id'      => $userId,
+                'user_name'    => $userName,
+                'event_id'     => $eventId,
+                'event_name'   => $eventName,
+            ];
+        }
+
+        // Use 'ordered' => false so MongoDB continues inserting even if a duplicate barcode is hit
+        $collection->insertMany($documentsToInsert, ['ordered' => false]);
+
+    } catch (\MongoDB\Exception\BulkWriteException $e) {
+        // A BulkWriteException is expected if a barcode already exists due to the unique index.
+        // We catch it silently so the user still gets their print view without a crash.
+        error_log("Some barcodes were already saved: " . $e->getMessage());
+    } catch (\Throwable $e) {
+        // General fallback for network or connection issues
+        error_log("General MongoDB error: " . $e->getMessage());
+    }
+}
+
+// 4. Render the view template
 include __DIR__ . '/../views/ticket.php';

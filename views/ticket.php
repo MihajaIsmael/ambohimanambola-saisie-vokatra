@@ -3,6 +3,7 @@
 /**
  * @var string $date
  * @var string $userName
+ * @var string $eventName
  * @var string|int $userId
  * @var array $receiptProducts
  * @var array $labelsToPrint
@@ -112,6 +113,7 @@
 
     <div class="ticket-section">
         <p class="text-center bold" style="font-size: 14px;">FANAMARINANA / VOKATRA</p>
+        <p class="text-center" style="font-size: 12px;"><?= htmlspecialchars($eventName); ?></p>
         <p class="text-center" style="font-size: 10px;">Daty : <?= htmlspecialchars($date); ?></p>
         <div class="line"></div>
 
@@ -123,6 +125,7 @@
                 <tr class="bold">
                     <td>Vokatra</td>
                     <td class="text-right">Isany</td>
+                    <td class="text-right">Vidiny tsirairay</td>
                 </tr>
             </thead>
             <tbody>
@@ -130,6 +133,7 @@
                     <tr>
                         <td><?= htmlspecialchars($prod['name']); ?></td>
                         <td class="text-right bold">x <?= $prod['qty']; ?></td>
+                        <td class="text-right bold"><?= $prod['price']; ?></td>
                     </tr>
                 <?php endforeach; ?>
             </tbody>

@@ -2,6 +2,8 @@
 
 namespace App\Services;
 
+include_once __DIR__ . '/../utils.php';
+
 /**
  * Class BarcodeService
  * Manages the generation and structuring of semi-significant EAN-13 barcodes
@@ -10,104 +12,74 @@ namespace App\Services;
  */
 class BarcodeService
 {
-    // Permanent internal prefix
-    // TODO For future version, user can make this dynamic
-    private const INTERNAL_PREFIX = "26";
+    // FIXME: Make those dynamic (Extend)
+    const COUNTRY_CODE = "261";
+    const YEAR_CODE = "26";
+    const DAY_CODE = "6";
 
     /**
-     * Calculates the 13th EAN-13 check digit and returns the full 13-digit barcode string.
+     * Generate labels in a vast and dynamic way
      * 
-     * @param string $number12Digits Base payload of exactly 12 digits
+     * @param array $product
+     * @param string $userId
+     * @param int &$productCounter
      * 
-     * @return string Full 13-digit EAN-13 barcode
-     * 
-     * @throws \InvalidArgumentException If input is not exactly 12 digits or contains non-numeric characters
+     * @return array
      */
-    public static function computeEan13(string $number12Digits): string
+    public static function generateProductLabels(array $product, string $userId, int &$productCounter): array
     {
-        if (!preg_match('/^[0-9]{12}$/', $number12Digits)) {
-            throw new \InvalidArgumentException("EAN-13 base payload must be exactly 12 numeric digits.");
-        }
-
-        $digits = str_split($number12Digits);
-        $sum = 0;
-
-        foreach ($digits as $key => $digit) {
-            // Even indexes (0, 2, 4...) represent odd positions in EAN-13 standard (weight 1)
-            // Odd indexes (1, 3, 5...) represent even positions in EAN-13 standard (weight 3)
-            $sum += ($key % 2 === 0) ? $digit * 1 : $digit * 3;
-        }
-
-        $checkDigit = (10 - ($sum % 10)) % 10;
-
-        return $number12Digits . $checkDigit;
-    }
-
-    /**
-     * Extracts a standard 7-digit reference code compatible with Dolibarr.
-     * Structure: Prefix (2) + Event ID (2) + Member ID subset or Item Short Code (3)
-     * 
-     * @param string|int $eventId Unique identifier for the event
-     * @param string|int $memberId Unique identifier for the member/mpivavaka
-     * 
-     * @return string 7-digit product reference code
-     */
-    public static function generateProductCode7Digits($eventId, $memberId): string
-    {
-        $eventPart = str_pad(preg_replace('/[^0-9]/', '', $eventId), 2, "0", STR_PAD_LEFT);
-        $memberPart = str_pad(preg_replace('/[^0-9]/', '', $memberId), 3, "0", STR_PAD_LEFT);
-
-        // Extract the last 3 digits of the member part if it exceeds length
-        $memberPart = substr($memberPart, -3);
-
-        return self::INTERNAL_PREFIX . $eventPart . $memberPart;
-    }
-
-    /**
-     * Generates an array of individual product labels with structural EAN-13 barcodes.
-     * Structure (12 digits base): Prefix(2) + Event(2) + Member(4) + ProductSequence(4)
-     * 
-     * @param array $product Raw product details containing 'name', 'qty', 'price'
-     * @param string|int $eventId Current event identifier
-     * @param string|int $memberId Current member/mpivavaka identifier
-     * @param int &$itemCounter Global reference counter to ensure uniqueness per item
-     * 
-     * @return array List of generated labels containing formatting data
-     */
-    public static function generateProductLabels(array $product, $eventId, $memberId, int &$itemCounter): array
-    {
-        $qty = (int)$product['qty'];
-        $price = (float)$product['price'];
-        $prodName = $product['name'];
         $labels = [];
+        $qty = (int) array_get_default($product, 'qty', 1);
+        $price = (float) array_get_default($product, 'price', 0);
+        $name = array_get_default($product, 'name', 'Unknown');
 
-        // Pre-format fixed metadata segments
-        $eventPart = str_pad(preg_replace('/[^0-9]/', '', $eventId), 2, "0", STR_PAD_LEFT);
-        $memberPart = str_pad(preg_replace('/[^0-9]/', '', $memberId), 4, "0", STR_PAD_LEFT);
+        // ID formatted on 4 characters (ex: 564 -> 0564)
+        $userFormatted = str_pad($userId, 4, '0', STR_PAD_LEFT);
 
-        // Generate a unified 7-digit product reference code for Dolibarr mapping
-        $productCode7 = self::generateProductCode7Digits($eventId, $memberId);
+        // Loop on the quantity requested for this product
+        for ($i = 0; $i < $qty; $i++) {
 
-        for ($i = 1; $i <= $qty; $i++) {
-            // Unique sequence per item incremented globally
-            $productSequence = str_pad($itemCounter, 4, "0", STR_PAD_LEFT);
+            // AUTOMATISATION : The product number increments continuously (01, 02, 03...)
+            $prodFormatted = str_pad((string)$productCounter, 2, '0', STR_PAD_LEFT);
 
-            // Assemble the final 12 digits payload
-            $baseCode12 = self::INTERNAL_PREFIX . $eventPart . $memberPart . $productSequence;
+            // Central bloc of 7 digits unique0201 per label
+            $productCode7 = self::DAY_CODE . $userFormatted . $prodFormatted;
 
-            // Generate full EAN-13 string safely
-            $ean13Code = self::computeEan13($baseCode12);
+            // EAN-13 payload construction (12 digits)
+            $basePayload = self::COUNTRY_CODE . self::YEAR_CODE . $productCode7;
+
+            // 13th digit calculation (check digit)
+            $checksum = self::calculateEanChecksum($basePayload);
+            $fullBarcode13 = $basePayload . $checksum;
 
             $labels[] = [
-                'name'         => $prodName,
-                'price'        => $price,
-                'product_code' => $productCode7,
-                'barcode'      => $ean13Code
+                'barcode'      => $fullBarcode13,
+                'product_code' => $productCode7, // Unique for each physical label
+                'name'         => $name,
+                'price'        => $price
             ];
 
-            $itemCounter++;
+            // Increment the automatic counter for the next label
+            $productCounter++;
         }
 
         return $labels;
+    }
+
+    /**
+     * Calculate the EAN-13 checksum
+     * 
+     * @param string $digits
+     * 
+     * @return int
+     */
+    private static function calculateEanChecksum(string $digits): int
+    {
+        $sum = 0;
+        for ($i = 0; $i < 12; $i++) {
+            $sum += (int) $digits[$i] * ($i % 2 === 0 ? 1 : 3);
+        }
+
+        return (10 - ($sum % 10)) % 10;
     }
 }
