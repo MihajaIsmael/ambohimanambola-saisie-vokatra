@@ -12,11 +12,6 @@ include_once __DIR__ . '/../utils.php';
  */
 class BarcodeService
 {
-    // FIXME: Make those dynamic (Extend)
-    const COUNTRY_CODE = "261";
-    const YEAR_CODE = "26";
-    const DAY_CODE = "6";
-
     /**
      * Generate labels in a vast and dynamic way
      * 
@@ -26,7 +21,7 @@ class BarcodeService
      * 
      * @return array
      */
-    public static function generateProductLabels(array $product, string $userId, int &$productCounter): array
+    public static function generateProductLabels(array $product, string $userId, int &$productCounter, array $settings): array
     {
         $labels = [];
         $qty = (int) array_get_default($product, 'qty', 1);
@@ -43,10 +38,10 @@ class BarcodeService
             $prodFormatted = str_pad((string)$productCounter, 2, '0', STR_PAD_LEFT);
 
             // Central bloc of 7 digits unique0201 per label
-            $productCode7 = self::DAY_CODE . $userFormatted . $prodFormatted;
+            $productCode7 = $settings['event_id'] . $userFormatted . $prodFormatted;
 
             // EAN-13 payload construction (12 digits)
-            $basePayload = self::COUNTRY_CODE . self::YEAR_CODE . $productCode7;
+            $basePayload = $settings['country_code'] . $settings['year_code'] . $productCode7;
 
             // 13th digit calculation (check digit)
             $checksum = self::calculateEanChecksum($basePayload);

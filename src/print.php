@@ -16,22 +16,24 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 // 1. Data retrieval and sanitization
 $userId = array_get_default($_POST, 'user_id', 'Unknown');
 $userName = array_get_default($_POST, 'user_name', 'Iza ?');
-$eventName = array_get_default($_POST, 'event_name', 'Vokatra');
 $productsInput = array_get_default($_POST, 'products', []);
+$eventSettingId = array_get_default($_POST, 'global_event_setting_id', '');
 $date = date('d/m/Y H:i');
-
-// Hardcoded Event ID for the current session mapping
-// TODO For future version, user can make this dynamic
-$eventId = "06";
 
 $receiptProducts = [];
 $labelsToPrint = [];
 $itemCounter = 1;
+$productCounter = 1;
 
 // 2. Process products input matrix and generate data
 $mongoClient = new MongoDB\Client($_ENV['MONGO_URI'] ?? 'mongodb://localhost:27017');
 $db = $mongoClient->selectDatabase($_ENV['DB_NAME']);
-$productCounter = 1;
+// Récupérer les données de l'événement spécifique depuis MongoDB
+$settingsCollection = $db->selectCollection('settings');
+$globalSettings = $settingsCollection->findOne(['_id' => new MongoDB\BSON\ObjectId($eventSettingId)]);
+$eventName = $globalSettings['event_name'];
+$eventId = $globalSettings['event_id'];
+
 foreach ($productsInput as $product) {
     $receiptProducts[] = [
         'name' => array_get_default($product, 'name', 'Unknown'),
@@ -39,7 +41,7 @@ foreach ($productsInput as $product) {
         'price'  => (float) array_get_default($product, 'price', 0),
     ];
 
-    $generatedLabels = BarcodeService::generateProductLabels($product, $userId, $productCounter);
+    $generatedLabels = BarcodeService::generateProductLabels($product, $userId, $productCounter, (array)$globalSettings);
     $labelsToPrint = array_merge($labelsToPrint, $generatedLabels);
 }
 

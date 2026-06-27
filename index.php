@@ -1,3 +1,25 @@
+<?php
+
+include_once __DIR__ . '/vendor/autoload.php';
+include_once __DIR__ . '/src/utils.php';
+
+$mongoClient = new MongoDB\Client($_ENV['MONGO_URI'] ?? 'mongodb://localhost:27017');
+$settingsCollection = $mongoClient->selectDatabase($_ENV['DB_NAME'])->selectCollection('settings');
+
+// 1. Get default ID send by save_settings.php
+$selectedEventId = array_get_default($_GET, 'last_id', '');
+
+// Set default to last event if ID is empty
+if (empty($selectedEventId)) {
+    $latestEvent = $settingsCollection->findOne([], ['sort' => ['updated_at' => -1]]);
+    if ($latestEvent) {
+        $selectedEventId = (string) $latestEvent['_id'];
+    }
+}
+
+$allEvents = $settingsCollection->find([], ['sort' => ['event_name' => 1]]);
+?>
+
 <!DOCTYPE html>
 <html lang="fr">
 
@@ -148,10 +170,60 @@
 
 <body>
 
+    <div id="eventModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; justify-content: center; align-items: center;">
+        <div style="background: white; padding: 25px; border-radius: 8px; width: 100%; max-width: 450px; box-shadow: 0 4px 15px rgba(0,0,0,0.2);">
+            <h3 style="margin-top: 0; border-bottom: 2px solid #2ecc71; padding-bottom: 10px;">Créer un nouvel Événement</h3>
+
+            <form action="src/save_settings.php" method="POST">
+                <div style="margin-bottom: 12px;">
+                    <label style="display:block; margin-bottom:5px; font-weight:bold;">Code Pays</label>
+                    <input type="text" name="country_code" value="261" maxlength="3" required pattern="\d{3}" style="width:100%; padding:8px; box-sizing:border-box;">
+                </div>
+                <div style="margin-bottom: 12px;">
+                    <label style="display:block; margin-bottom:5px; font-weight:bold;">Code Année</label>
+                    <input type="text" name="year_code" value="<?= date('y') ?>" maxlength="2" required pattern="\d{2}" style="width:100%; padding:8px; box-sizing:border-box;">
+                </div>
+                <div style="margin-bottom: 12px;">
+                    <label style="display:block; margin-bottom:5px; font-weight:bold;">ID de l'Événement</label>
+                    <input type="text" name="event_id" placeholder="Ex: 6" maxlength="1" required pattern="\d{1}" style="width:100%; padding:8px; box-sizing:border-box;">
+                </div>
+                <div style="margin-bottom: 20px;">
+                    <label style="display:block; margin-bottom:5px; font-weight:bold;">Nom de l'Événement</label>
+                    <input type="text" name="event_name" placeholder="Ex: Vokatra 06/2026" required style="width:100%; padding:8px; box-sizing:border-box;">
+                </div>
+
+                <div style="display: flex; justify-content: flex-end; gap: 10px;">
+                    <button type="button" onclick="closeEventModal()" style="padding: 8px 15px; background: #e74c3c; color: white; border: none; border-radius: 4px; cursor: pointer;">Annuler</button>
+                    <button type="submit" style="padding: 8px 15px; background: #2ecc71; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold;">Enregistrer</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <div class="container">
         <h2>Fandraisana vokatra</h2>
         <form action="src/print.php" method="POST" target="print_popup" onsubmit="openPrintPopup();">
 
+            <div class="event-selector-bar" style="background: #ecf0f1; padding: 15px; border-radius: 6px; margin-bottom: 20px; display: flex; align-items: center; gap: 15px;">
+                <label for="current_event_select" style="font-weight: bold;">Événement actif :</label>
+
+                <select id="current_event_select" name="global_event_setting_id" required style="padding: 8px; font-size: 14px; min-width: 250px;">
+                    <option value="">-- Choisir un événement --</option>
+                    <?php foreach ($allEvents as $event): ?>
+                        <?php $eventIdString = (string) $event['_id']; ?>
+                        <option value="<?= $eventIdString ?>"
+                            data-country="<?= $event['country_code'] ?>"
+                            data-year="<?= $event['year_code'] ?>"
+                            data-eventid="<?= $event['event_id'] ?>"
+                            <?= ($eventIdString === $selectedEventId) ? 'selected' : '' ?>> <?= htmlspecialchars($event['event_name']) ?> (<?= $event['event_id'] ?>)
+                        </option>
+                    <?php endforeach; ?>
+                </select>
+
+                <button type="button" onclick="openEventModal()" style="padding: 8px 12px; background: #2ecc71; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold;">
+                    + Nouveau
+                </button>
+            </div>
             <div class="search-container">
                 <label for="user-search">Rechercher un Mpivavaka :</label>
                 <input type="text" id="user-search" name="user_name" class="search-input" autocomplete="off" placeholder="Tapez les premières lettres...">
@@ -177,7 +249,8 @@
                 <button type="button" class="btn-add" onclick="addRow()">+ Hanampy vokatra</button>
             </div>
 
-            <button type="submit" style="width: 100%; margin-top: 20px; font-size: 16px;">Hamoahana rosia</button>
+            <button type="submit" style="width: 75%; margin-top: 20px; font-size: 16px;">Hamoahana rosia</button>
+            <button type="reset" style="width: 20%; margin-top: 20px; font-size: 16px;">Manaraka</button>
         </form>
     </div>
 
@@ -284,10 +357,25 @@
             const height = window.screen.height - (window.screen.height / 4);
             const left = (window.screen.width / 2) - (width / 2);
             const top = (window.screen.height / 2) - (height / 2);
-            
+
             // Open a blank window with the correct name and specifications before the form submits into it
             window.open('', 'print_popup', `width=${width},height=${height},top=${top},left=${left},status=no,toolbar=no,menubar=no,scrollbars=yes`);
         }
+
+        function openEventModal() {
+            document.getElementById('eventModal').style.display = 'flex';
+        }
+
+        function closeEventModal() {
+            document.getElementById('eventModal').style.display = 'none';
+        }
+
+        window.addEventListener('DOMContentLoaded', () => {
+            const select = document.getElementById('current_event_select');
+            if (select.options.length <= 1) {
+                openEventModal();
+            }
+        });
     </script>
 </body>
 
