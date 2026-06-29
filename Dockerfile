@@ -12,7 +12,7 @@ ENV COMPOSER_ALLOW_SUPERUSER=1
 WORKDIR /app
 COPY composer.json composer.lock* ./
 RUN if [ -f "composer.json" ]; then \
-    composer install --no-interaction --no-plugins --no-scripts --no-dev --optimize-autoloader; \
+    composer install --no-interaction --no-plugins --no-scripts --no-dev --optimize-autoloader --ignore-platform-reqs; \
     fi
 
 # --- STEP 2 : The Final Production Image ---
