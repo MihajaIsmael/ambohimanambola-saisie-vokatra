@@ -10,7 +10,14 @@ COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 ENV COMPOSER_ALLOW_SUPERUSER=1
 
 WORKDIR /app
+
+# 1. Copy first the configuration files
 COPY composer.json composer.lock* ./
+
+# 2. Copy src folder for Composer to link utils.php and PSR-4
+COPY src/ ./src/
+
+# 3. Run the installation with the indexing of the files
 RUN if [ -f "composer.json" ]; then \
     composer install --no-interaction --no-plugins --no-scripts --no-dev --optimize-autoloader --ignore-platform-reqs; \
     fi
@@ -30,9 +37,9 @@ RUN a2enmod rewrite
 
 WORKDIR /var/www/html
 
-# On récupère le dossier vendor généré à l'étape 1
+# Get the vendor folder
 COPY --from=builder /app/vendor /var/www/html/vendor
-# On copie le reste du code
+# Copy the rest of the code
 COPY . /var/www/html/
 
 RUN chown -R www-data:www-data /var/www/html

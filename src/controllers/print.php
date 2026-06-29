@@ -1,15 +1,14 @@
 <?php
 
 // Include utilities and the dedicated Barcode Service
-include_once __DIR__ . '/utils.php';
-include_once __DIR__ . '/services/BarcodeService.php';
-include_once __DIR__ . '/../vendor/autoload.php';
+include_once __DIR__ . '/../services/BarcodeService.php';
+include_once __DIR__ . '/../../vendor/autoload.php';
 
 use App\Services\BarcodeService;
 
 // Only allow POST requests to access this script
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-    header('Location: ../index.php');
+    header('Location: ../../index.php');
     exit;
 }
 
@@ -18,6 +17,7 @@ $userId = array_get_default($_POST, 'user_id', 'Unknown');
 $userName = array_get_default($_POST, 'user_name', 'Iza ?');
 $productsInput = array_get_default($_POST, 'products', []);
 $eventSettingId = array_get_default($_POST, 'global_event_setting_id', '');
+$eventSettingId = $eventSettingId ? new MongoDB\BSON\ObjectId($eventSettingId) : null;
 $date = date('d/m/Y H:i');
 
 $receiptProducts = [];
@@ -30,7 +30,7 @@ $mongoClient = new MongoDB\Client($_ENV['MONGO_URI'] ?? 'mongodb://localhost:270
 $db = $mongoClient->selectDatabase($_ENV['DB_NAME']);
 // Récupérer les données de l'événement spécifique depuis MongoDB
 $settingsCollection = $db->selectCollection('settings');
-$globalSettings = $settingsCollection->findOne(['_id' => new MongoDB\BSON\ObjectId($eventSettingId)]);
+$globalSettings = $settingsCollection->findOne(['_id' => $eventSettingId]);
 $eventName = $globalSettings['event_name'];
 $eventId = $globalSettings['event_id'];
 
@@ -62,6 +62,7 @@ if (! empty($labelsToPrint)) {
                 'user_id'      => $userId,
                 'user_name'    => $userName,
                 'event_id'     => $eventId,
+                'event_setting_id' => $eventSettingId,
                 'event_name'   => $eventName,
             ];
         }
@@ -80,4 +81,4 @@ if (! empty($labelsToPrint)) {
 }
 
 // 4. Render the view template
-include __DIR__ . '/../views/ticket.php';
+include __DIR__ . '/../../views/ticket.php';

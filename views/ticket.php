@@ -181,7 +181,7 @@
         </div>
     <?php endforeach; ?>
 
-    <script src="../assets/js/JsBarcode.all.min.js"></script>
+    <script src="../../assets/js/JsBarcode.all.min.js"></script>
     <script>
         window.onload = function() {
             const barcodeElements = document.querySelectorAll('.barcode-generator');

@@ -2,7 +2,7 @@
 
 namespace App\Services;
 
-include_once __DIR__ . '/../utils.php';
+include_once __DIR__ . '/../../vendor/autoload.php';
 
 /**
  * Class BarcodeService
