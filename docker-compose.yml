@@ -8,6 +8,7 @@ services:
       - "8087:80"
     volumes:
       - .:/var/www/html
+      - /var/www/html/vendor
     env_file:
       - .env
     environment:
