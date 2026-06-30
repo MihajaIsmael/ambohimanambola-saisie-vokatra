@@ -242,7 +242,10 @@ $latestScans = $latestScansCursor->toArray();
 
                 <div class="search-container">
                     <label for="user-search">Rechercher un Mpivavaka :</label>
-                    <input type="text" id="user-search" name="user_name" autocomplete="off" placeholder="Tapez les premières lettres...">
+                    <div style="display: flex; gap: 10px;">
+                        <input type="text" id="user-search" name="user_name" autocomplete="off" placeholder="Tapez les premières lettres..." style="flex: 1;">
+                        <button type="button" id="btn-quick-create" style="background: #e67e22; display: none;">+ Créer</button>
+                    </div>
                     <input type="hidden" id="selected-user-id" name="user_id">
                     <div id="suggestions-list" class="suggestions-dropdown"></div>
                 </div>
@@ -308,23 +311,39 @@ $latestScans = $latestScansCursor->toArray();
             const hiddenIdInput = document.getElementById('selected-user-id');
             const selectionDisplay = document.getElementById('selection-display');
             const confirmedName = document.getElementById('confirmed-name');
+            const quickCreateBtn = document.getElementById('btn-quick-create');
 
-            // Handle typing and searching lookup actions inside the autocomplete box
+            // Helper function to lock and automatically select a user
+            function selectUser(id, name) {
+                searchInput.value = name;
+                hiddenIdInput.value = id;
+
+                confirmedName.textContent = `${name} (ID: ${id})`;
+                selectionDisplay.style.display = 'block';
+                suggestionsList.style.display = 'none';
+                quickCreateBtn.style.display = 'none'; // Hide create button once selected
+            }
+
+            // Handle typing and searching lookup actions
             searchInput.addEventListener('input', function() {
                 const query = this.value.trim();
 
                 if (query.length < 2) {
                     suggestionsList.style.display = 'none';
+                    quickCreateBtn.style.display = 'none';
                     return;
                 }
 
-                fetch(`database/getUser.php?q=${encodeURIComponent(query)}`)
+                // Show quick create button as fallback
+                quickCreateBtn.style.display = 'block';
+
+                fetch(`controllers/MpivavakaController.php?action=search&q=${encodeURIComponent(query)}`)
                     .then(response => response.json())
                     .then(data => {
                         suggestionsList.innerHTML = '';
 
                         if (data.length === 0) {
-                            suggestionsList.innerHTML = '<div class="suggestion-empty">Aucun résultat trouvé</div>';
+                            suggestionsList.innerHTML = '<div class="suggestion-empty">Aucun résultat trouvé. Cliquez sur Créer.</div>';
                             suggestionsList.style.display = 'block';
                             return;
                         }
@@ -335,12 +354,7 @@ $latestScans = $latestScansCursor->toArray();
                             row.textContent = user.name;
 
                             row.addEventListener('click', function() {
-                                searchInput.value = user.name;
-                                hiddenIdInput.value = user.id;
-
-                                confirmedName.textContent = `${user.name} (ID: ${user.id})`;
-                                selectionDisplay.style.display = 'block';
-                                suggestionsList.style.display = 'none';
+                                selectUser(user.id, user.name);
                             });
 
                             suggestionsList.appendChild(row);
@@ -353,9 +367,37 @@ $latestScans = $latestScansCursor->toArray();
                     });
             });
 
-            // Dismiss dropdown suggestions if clicked outside the target scope elements
+            // Handle Quick Create Button Click Interaction
+            quickCreateBtn.addEventListener('click', function() {
+                const nameToCreate = searchInput.value.trim();
+                if (!nameToCreate) return;
+
+                const formData = new FormData();
+                formData.append('name', nameToCreate);
+
+                // Perform asynchronous creation request
+                fetch('controllers/MpivavakaController.php?action=create', {
+                        method: 'POST',
+                        body: formData
+                    })
+                    .then(response => response.json())
+                    .then(result => {
+                        if (result.success) {
+                            // 💡 AUTOMATIC SELECTION: Instantly select the newly created user
+                            selectUser(result.id, result.name);
+                            alert(`Mpivavaka créé avec succès ! ID attribué : ${result.id}`);
+                        } else {
+                            alert(`Erreur lors de la création : ${result.message}`);
+                        }
+                    })
+                    .catch(error => {
+                        console.error('An error occurred during user creation process:', error);
+                    });
+            });
+
+            // Dismiss dropdown suggestions if clicked outside
             document.addEventListener('click', function(e) {
-                if (e.target !== searchInput && e.target !== suggestionsList) {
+                if (e.target !== searchInput && e.target !== suggestionsList && e.target !== quickCreateBtn) {
                     suggestionsList.style.display = 'none';
                 }
             });
