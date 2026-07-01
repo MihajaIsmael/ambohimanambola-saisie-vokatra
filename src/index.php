@@ -36,16 +36,20 @@ $latestScans = $latestScansCursor->toArray();
         body {
             font-family: 'Segoe UI', Arial, sans-serif;
             margin: 20px;
-            background: #f4f4f9;
+            background: #dfdedeff;
             color: #333;
+
+            background: linear-gradient(-45deg, #296633ff, #376fafff, #23a6d5, #23d5ab);
+            background-size: 400% 400%;
+            animation: gradient 15s ease infinite
         }
 
         .main-layout {
             display: flex;
             gap: 30px;
             align-items: flex-start;
-            max-width: 1100px;
-            margin: 0 auto;
+            max-width: 1200px;
+            margin: 0 9% 0px auto;
         }
 
         .container {
@@ -54,6 +58,7 @@ $latestScans = $latestScansCursor->toArray();
             padding: 25px;
             border-radius: 8px;
             box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+            border-top: 4px solid #2ecc71;
         }
 
         .sidebar {
@@ -150,11 +155,11 @@ $latestScans = $latestScansCursor->toArray();
         }
 
         .qty-input {
-            max-width: 70px;
+            max-width: 50px;
         }
 
         .price-input {
-            max-width: 110px;
+            max-width: 130px;
         }
 
         button {
@@ -180,6 +185,18 @@ $latestScans = $latestScansCursor->toArray();
             gap: 15px;
             margin-top: 20px;
         }
+
+        @keyframes gradient {
+            0% {
+                background-position: 0% 50%;
+            }
+            50% {
+                background-position: 100% 50%;
+            }
+            100% {
+                background-position: 0% 50%;
+            }
+        }
     </style>
 </head>
 
@@ -187,23 +204,23 @@ $latestScans = $latestScansCursor->toArray();
 
     <div id="eventModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; justify-content: center; align-items: center;">
         <div style="background: white; padding: 25px; border-radius: 8px; width: 100%; max-width: 450px; box-shadow: 0 4px 15px rgba(0,0,0,0.2);">
-            <h3 style="margin-top: 0; border-bottom: 2px solid #2ecc71; padding-bottom: 10px;">Créer un nouvel Événement</h3>
+            <h3 style="margin-top: 0; border-bottom: 2px solid #2ecc71; padding-bottom: 10px;">Fikirana kaody bara</h3>
 
             <form action="controllers/save_settings.php" method="POST">
                 <div style="margin-bottom: 12px;">
-                    <label>Code Pays</label>
+                    <label>Kaody 3 voalohany</label>
                     <input type="text" name="country_code" value="261" maxlength="3" required pattern="\d{3}">
                 </div>
                 <div style="margin-bottom: 12px;">
-                    <label>Code Année</label>
+                    <label>Kaody 2 manaraka</label>
                     <input type="text" name="year_code" value="<?= date('y') ?>" maxlength="2" required pattern="\d{2}">
                 </div>
                 <div style="margin-bottom: 12px;">
-                    <label>ID de l'Événement</label>
+                    <label>Kaody 1 farany</label>
                     <input type="text" name="event_id" placeholder="Ex: 6" maxlength="1" required pattern="\d{1}">
                 </div>
                 <div style="margin-bottom: 20px;">
-                    <label>Nom de l'Événement</label>
+                    <label>Anaran'ny fotoana</label>
                     <input type="text" name="event_name" placeholder="Ex: Vokatra 06/2026" required>
                 </div>
 
@@ -222,7 +239,7 @@ $latestScans = $latestScansCursor->toArray();
             <form action="controllers/print.php" method="POST" target="print_popup" onsubmit="openPrintPopup();">
 
                 <div style="background: #ecf0f1; padding: 15px; border-radius: 6px; margin-bottom: 20px; display: flex; align-items: center; gap: 15px;">
-                    <label for="current_event_select" style="margin-bottom: 0;">Événement actif :</label>
+                    <label for="current_event_select" style="margin-bottom: 0;">Fotoana :</label>
 
                     <select id="current_event_select" name="global_event_setting_id" required style="flex: 1; min-width: 200px;">
                         <option value="">-- Choisir un événement --</option>
@@ -237,35 +254,35 @@ $latestScans = $latestScansCursor->toArray();
                         <?php endforeach; ?>
                     </select>
 
-                    <button type="button" onclick="openEventModal()" style="background: #2ecc71;">+ Nouveau</button>
+                    <button type="button" onclick="openEventModal()" style="background: #2ecc71;">+ Hamorona</button>
                 </div>
 
                 <div class="search-container">
-                    <label for="user-search">Rechercher un Mpivavaka :</label>
+                    <label for="user-search">Hikaroka mpivavaka :</label>
                     <div style="display: flex; gap: 10px;">
-                        <input type="text" id="user-search" name="user_name" autocomplete="off" placeholder="Tapez les premières lettres..." style="flex: 1;">
-                        <button type="button" id="btn-quick-create" style="background: #e67e22; display: none;">+ Créer</button>
+                        <input type="text" id="user-search" name="user_name" autocomplete="off" placeholder="Soraty eto ny anarana..." style="flex: 1;">
+                        <button type="button" id="btn-quick-create" style="background: #e67e22; display: none;">+ Ampidirina</button>
                     </div>
                     <input type="hidden" id="selected-user-id" name="user_id">
                     <div id="suggestions-list" class="suggestions-dropdown"></div>
                 </div>
 
                 <div id="selection-display" class="selection-panel">
-                    <span class="selection-status">✓ Sélectionné :</span>
                     <span id="confirmed-name" class="selection-text"></span>
+                    <span class="selection-status">✓</span>
                 </div>
 
                 <div class="form-group">
                     <label>Vokatra :</label>
                     <div id="products_container">
                         <div class="product-row">
-                            <input type="text" name="products[0][name]" placeholder="Nom du produit" required>
-                            <input type="number" name="products[0][qty]" class="qty-input" placeholder="Qté" min="1" required>
-                            <input type="number" step="0.01" name="products[0][price]" class="price-input" placeholder="Prix" required>
+                            <input type="text" name="products[0][name]" placeholder="Anaran'ny vokatra" required>
+                            <input type="number" name="products[0][qty]" class="qty-input" placeholder="Isany" min="1" required>
+                            <input type="number" step="0.01" name="products[0][price]" class="price-input" placeholder="Vidiny tsirairay" required>
                             <button type="button" class="btn-remove" onclick="removeRow(this)">X</button>
                         </div>
                     </div>
-                    <button type="button" class="btn-add" onclick="addRow()" style="margin-top: 10px;">+ Hanampy vokatra</button>
+                    <button type="button" class="btn-add" onclick="addRow()" style="margin-top: 10px;">+ Vokatra hafa</button>
                 </div>
 
                 <div class="action-buttons">
@@ -277,13 +294,13 @@ $latestScans = $latestScansCursor->toArray();
 
         <div class="sidebar">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; border-bottom: 2px solid #f4f4f9; padding-bottom: 10px;">
-                <h4 style="margin: 0; color: #2c3e50;">Derniers Scans</h4>
-                <a href="history.php" style="font-size: 13px; color: #3498db; text-decoration: none; font-weight: bold;">Voir tout →</a>
+                <h4 style="margin: 0; color: #2c3e50;">Ireo voaray farany</h4>
+                <a href="history.php" style="font-size: 13px; color: #3498db; text-decoration: none; font-weight: bold;">Vokatra rehetra →</a>
             </div>
 
             <ul style="list-style: none; padding: 0; margin: 0;">
                 <?php if (count($latestScans) === 0): ?>
-                    <li style="color: #888; font-style: italic; font-size: 13px; text-align: center; padding: 15px 0;">Aucun enregistrement</li>
+                    <li style="color: #888; font-style: italic; font-size: 13px; text-align: center; padding: 15px 0;">Tsy mbola misy voaray</li>
                 <?php else: ?>
                     <?php foreach ($latestScans as $scan): ?>
                         <li style="padding: 10px 0; border-bottom: 1px solid #eee; font-size: 13px;">

@@ -1,13 +1,27 @@
 <?php
+include_once __DIR__ . '/../vendor/autoload.php';
 
-/**
- * @var string $date
- * @var string $userName
- * @var string $eventName
- * @var string|int $userId
- * @var array $receiptProducts
- * @var array $labelsToPrint
- */
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+
+// Fallback safety if accessed directly without session data payload
+if (!isset($_SESSION['ticket_data'])) {
+    header('Location: ../index.php');
+    exit;
+}
+
+// Extract variables from session state context
+$ticketData      = array_get_default($_SESSION, 'ticket_data');
+$date            = array_get_default($ticketData, 'date');
+$userName        = array_get_default($ticketData, 'userName');
+$eventName       = array_get_default($ticketData, 'eventName');
+$userId          = array_get_default($ticketData, 'userId');
+$receiptProducts = array_get_default($ticketData, 'receiptProducts');
+$labelsToPrint   = array_get_default($ticketData, 'labelsToPrint');
+
+// Clear the temporary ticket session storage so it doesn't persist on reload
+unset($_SESSION['ticket_data']);
 ?>
 <!DOCTYPE html>
 <html lang="fr">
@@ -33,7 +47,7 @@
 
         /* Maintain Monospace font only for tabular layouts if needed */
         table {
-            width: 100%;
+            width: 95%;
             border-collapse: collapse;
             font-family: 'Calibri', sans-serif;
         }
@@ -112,15 +126,16 @@
 <body>
 
     <div class="ticket-section">
-        <p class="text-center bold" style="font-size: 14px;">FANAMARINANA / VOKATRA</p>
-        <p class="text-center" style="font-size: 12px;"><?= htmlspecialchars($eventName); ?></p>
+        <p class="text-center" style="font-size: 10px;">FANAMARINANA / VOKATRA</p>
+        <p class="text-center bold" style="font-size: 14px;"><?= htmlspecialchars(strtoupper($eventName)); ?></p>
         <p class="text-center" style="font-size: 10px;">Daty : <?= htmlspecialchars($date); ?></p>
         <div class="line"></div>
 
-        <p><strong>Vokatra voaray avy amin'i :</strong> <?= htmlspecialchars($userName); ?>
+        <p class="text-center bold">Vokatra voaray avy amin'i</p>
+        <p class="text-center"><?= htmlspecialchars($userName); ?></p>
         <div class="line"></div>
 
-        <table>
+        <table style="margin-left:5px;">
             <thead>
                 <tr class="bold">
                     <td>Vokatra</td>
@@ -133,7 +148,7 @@
                     <tr>
                         <td><?= htmlspecialchars($prod['name']); ?></td>
                         <td class="text-right bold">x <?= $prod['qty']; ?></td>
-                        <td class="text-right bold"><?= $prod['price']; ?></td>
+                        <td class="text-right bold"><?= number_format($prod['price'], 0, ',', ' '); ?></td>
                     </tr>
                 <?php endforeach; ?>
             </tbody>
@@ -145,7 +160,7 @@
 
     <?php foreach ($labelsToPrint as $label): ?>
         <div class="ticket-section">
-            <p class="text-center bold" style="font-size: 11px; margin: 0;">ÉTIQUETTE PRODUIT</p>
+            <p class="text-center" style="font-size: 11px; margin: 0;">Etikety ho an'ny vokatra</p>
             <div class="line"></div>
 
             <div class="code">
