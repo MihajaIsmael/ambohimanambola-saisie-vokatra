@@ -80,5 +80,25 @@ if (! empty($labelsToPrint)) {
     }
 }
 
-// 4. Render the view template
-include __DIR__ . '/../../views/ticket.php';
+// 4. Session Persistence and Pattern POST-Redirect-GET
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+
+// Pass all necessary view variables into the session payload
+$_SESSION['ticket_data'] = [
+    'date'            => $date,
+    'userName'        => $userName,
+    'eventName'       => $eventName,
+    'userId'          => $userId,
+    'receiptProducts' => $receiptProducts,
+    'labelsToPrint'   => $labelsToPrint
+];
+
+// CRITICAL: Save and release the session file lock immediately 
+// so concurrent requests like history.php can load without waiting.
+session_write_close();
+
+// Clear the HTTP POST state by redirecting to the template responder view
+header('Location: ../../views/ticket.php');
+exit;
