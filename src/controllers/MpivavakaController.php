@@ -16,7 +16,7 @@ $action = array_get_default($_REQUEST, 'action');
 try {
     switch ($action) {
 
-        // 🔍 ACTION: SEARCH / AUTOCOMPLETE
+        // 🔍 ACTION: SEARCH / AUTOCOMPLETE (Updated to fetch address)
         case 'search':
             $query = trim(array_get_default($_GET, 'q'));
             if (strlen($query) < 2) {
@@ -26,7 +26,6 @@ try {
 
             // Perform a case-insensitive regex search mapping across user documents
             $searchEscaped = preg_quote($query, '/');
-
             $filter = [
                 'name' => [
                     '$regex'   => $searchEscaped,
@@ -44,20 +43,23 @@ try {
             $results = [];
             foreach ($cursor as $user) {
                 $results[] = [
-                    'id'   => (int)$user['id'],
-                    'name' => $user['name']
+                    'id'      => (int)$user['id'],
+                    'name'    => $user['name'],
+                    'address' => $user['address'],
                 ];
             }
             echo json_encode($results);
             break;
 
-        // ➕ ACTION: QUICK CREATE WITH AUTO-INCREMENT
+        // ➕ ACTION: QUICK CREATE WITH ADDRESS
         case 'create':
             if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
                 throw new Exception('Invalid request method for execution pipeline.');
             }
 
             $name = strtoupper(trim(array_get_default($_POST, 'name')));
+            $address = array_get_default($_POST, 'address');
+
             if (empty($name)) {
                 throw new Exception('Name payload cannot be empty.');
             }
@@ -72,7 +74,7 @@ try {
                 ]
             ]);
 
-            $newId = 1; // Fallback index if collection is empty
+            $newId = 1;
             if ($highestUser && isset($highestUser['id'])) {
                 $newId = (int)$highestUser['id'] + 1;
             }
@@ -81,13 +83,15 @@ try {
             $usersCollection->insertOne([
                 'id'         => $newId,
                 'name'       => $name,
+                'address'    => $address,
                 'created_at' => new MongoDB\BSON\UTCDateTime()
             ]);
 
             echo json_encode([
                 'success' => true,
                 'id'      => $newId,
-                'name'    => $name
+                'name'    => $name,
+                'address' => $address
             ]);
             break;
 

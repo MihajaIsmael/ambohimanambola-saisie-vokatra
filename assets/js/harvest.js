@@ -115,6 +115,10 @@ document.addEventListener('DOMContentLoaded', function () {
                         row.className = 'suggestion-item';
                         row.textContent = user.name;
 
+                        if (user.address) {
+                            row.textContent += ' - ' + user.address;
+                        }
+
                         row.addEventListener('click', function () {
                             selectUser(user.id, user.name);
                         });
