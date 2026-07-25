@@ -23,7 +23,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $insertedId = (string) $result->getInsertedId();
 
         // 3. Send ID to the form
-        header("Location: ../index.php?last_id=" . $insertedId);
+        header("Location: ../?last_id=" . $insertedId);
         exit;
 
     } catch (\Throwable $e) {

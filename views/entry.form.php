@@ -207,7 +207,7 @@
         <div style="background: white; padding: 25px; border-radius: 8px; width: 100%; max-width: 450px; box-shadow: 0 4px 15px rgba(0,0,0,0.2);">
             <h3 style="margin-top: 0; border-bottom: 2px solid #2ecc71; padding-bottom: 10px;">Fikirana kaody bara</h3>
 
-            <form action="controllers/SettingsController.php" method="POST">
+            <form action="/settings" method="POST">
                 <div style="margin-bottom: 12px;">
                     <label>Kaody 3 voalohany</label>
                     <input type="text" name="country_code" value="261" maxlength="3" required pattern="\d{3}">
@@ -237,7 +237,7 @@
 
         <div class="container">
             <h2>Fandraisana vokatra</h2>
-            <form action="controllers/PrintController.php" method="POST" id="print-form" target="print_popup">
+            <form action="/print" method="POST" id="print-form" target="print_popup">
 
                 <div style="background: #ecf0f1; padding: 15px; border-radius: 6px; margin-bottom: 20px; display: flex; align-items: center; gap: 15px;">
                     <label for="current_event_select" style="margin-bottom: 0;">Fotoana :</label>
@@ -297,7 +297,7 @@
             <div class="sidebar">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; border-bottom: 2px solid #f4f4f9; padding-bottom: 10px;">
                     <h4 style="margin: 0; color: #2c3e50;">Ireo voaray farany</h4>
-                    <a href="history.php" style="font-size: 13px; color: #3498db; text-decoration: none; font-weight: bold;">Vokatra rehetra →</a>
+                    <a href="/vokatra" style="font-size: 13px; color: #3498db; text-decoration: none; font-weight: bold;">Vokatra rehetra →</a>
                 </div>
 
                 <ul id="latest-scans-list" style="list-style: none; padding: 0; margin: 0;">

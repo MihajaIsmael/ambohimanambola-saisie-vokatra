@@ -99,7 +99,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
             quickCreateBtn.style.display = 'block';
 
-            fetch(`controllers/MpivavakaController.php?action=search&q=${encodeURIComponent(query)}`)
+            fetch(`mpivavaka/search?q=${encodeURIComponent(query)}`)
                 .then(response => response.json())
                 .then(data => {
                     suggestionsList.innerHTML = '';
@@ -143,7 +143,7 @@ document.addEventListener('DOMContentLoaded', function () {
             const formData = new FormData();
             formData.append('name', nameToCreate);
 
-            fetch('controllers/MpivavakaController.php?action=create', {
+            fetch('/mpivavaka/create', {
                 method: 'POST',
                 body: formData
             })

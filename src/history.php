@@ -28,8 +28,8 @@ $skip = ($currentPage - 1) * $perPage;
 // 3. Fetch paginated records
 $vokatraList = $vokatraCollection->find($queryFilter, [
     'sort'  => ['printed_at' => -1],
-    'limit' => $perPage,
-    'skip'  => $skip
+    'limit' => (int) $perPage,
+    'skip'  => (int) $skip
 ]);
 $allEvents = $settingsCollection->find([], ['sort' => ['event_name' => 1]]);
 
@@ -254,9 +254,9 @@ if (!empty($aggregationResult)) {
         <div class="header-bar">
             <h2>Tatitry ny vokatra rehetra</h2>
             <div>
-                <a href="index.php" class="btn btn-secondary">
+                <a href="/" class="btn btn-secondary">
                     < Hiverina handray vokatra</a>
-                        <a href="controllers/ExportController.php?event_id=<?= $selectedEventId ?>" class="btn btn-success">⬇️ Exporter en CSV</a>
+                        <a href="/vokatra/export/event/<?= $selectedEventId ?>" class="btn btn-success">⬇️ Exporter en CSV</a>
             </div>
         </div>
 
@@ -271,10 +271,11 @@ if (!empty($aggregationResult)) {
             </div>
         </div>
 
-        <form method="GET" action="history.php" class="filter-zone">
+        <!-- Clean and optimized filter form compliant with the new routing system -->
+        <form method="GET" action="/vokatra" class="filter-zone" onsubmit="redirectToPrettyUrl(event)">
             <div class="filter-group">
                 <label style="font-weight: bold;">Sivana araka ny fotoana :</label>
-                <select name="filter_event_id" style="padding: 8px; font-size: 14px; min-width: 250px;">
+                <select id="event_select" name="filter_event_id" style="padding: 8px; font-size: 14px; min-width: 250px;">
                     <option value="">-- Fotoana rehetra --</option>
                     <?php foreach ($allEvents as $event): ?>
                         <?php $stringId = (string) $event['_id']; ?>
@@ -283,15 +284,19 @@ if (!empty($aggregationResult)) {
                         </option>
                     <?php endforeach; ?>
                 </select>
+                
                 <button type="submit" class="btn btn-primary">Sivanina</button>
+                
                 <?php if (!empty($selectedEventId)): ?>
-                    <a href="history.php?per_page=<?= $perPage ?>" style="color: #e74c3c; font-size: 14px; margin-left: 10px;">Fafana ny sivana</a>
+                    <!-- Reset filter link updated to point to the clean route structure -->
+                    <a href="/vokatra?per_page=<?= $perPage ?>" style="color: #e74c3c; font-size: 14px; margin-left: 10px;">Fafana ny sivana</a>
                 <?php endif; ?>
             </div>
 
             <div class="filter-group">
                 <label for="per_page_select" style="font-size: 13px; color: #7f8c8d;">Isa isaky ny pejy :</label>
-                <select id="per_page_select" name="per_page" onchange="this.form.submit()" style="padding: 6px; font-size: 13px;">
+                <!-- The change event now triggers the clean URL structure immediately -->
+                <select id="per_page_select" name="per_page" onchange="redirectToPrettyUrl(event)" style="padding: 6px; font-size: 13px;">
                     <?php foreach ([10, 25, 50, 100] as $limit): ?>
                         <option value="<?= $limit ?>" <?= ($perPage === $limit) ? 'selected' : '' ?>><?= $limit ?></option>
                     <?php endforeach; ?>
@@ -348,19 +353,19 @@ if (!empty($aggregationResult)) {
             </div>
 
             <div class="pagination-buttons">
-                <a href="history.php?filter_event_id=<?= $selectedEventId ?>&per_page=<?= $perPage ?>&page=<?= $currentPage - 1 ?>"
+                <a href="/vokatra?filter_event_id=<?= $selectedEventId ?>&per_page=<?= $perPage ?>&page=<?= $currentPage - 1 ?>"
                     class="page-link <?= ($currentPage <= 1) ? 'disabled' : '' ?>">« Teo aloha</a>
 
                 <?php for ($i = 1; $i <= $totalPages; $i++): ?>
                     <?php if ($i == 1 || $i == $totalPages || abs($i - $currentPage) <= 2): ?>
-                        <a href="history.php?filter_event_id=<?= $selectedEventId ?>&per_page=<?= $perPage ?>&page=<?= $i ?>"
+                        <a href="/vokatra?filter_event_id=<?= $selectedEventId ?>&per_page=<?= $perPage ?>&page=<?= $i ?>"
                             class="page-link <?= ($currentPage === $i) ? 'active' : '' ?>"><?= $i ?></a>
                     <?php elseif (abs($i - $currentPage) == 3): ?>
                         <span style="padding: 8px; color: #7f8c8d;">...</span>
                     <?php endif; ?>
                 <?php endfor; ?>
 
-                <a href="history.php?filter_event_id=<?= $selectedEventId ?>&per_page=<?= $perPage ?>&page=<?= $currentPage + 1 ?>"
+                <a href="/vokatra?filter_event_id=<?= $selectedEventId ?>&per_page=<?= $perPage ?>&page=<?= $currentPage + 1 ?>"
                     class="page-link <?= ($currentPage >= $totalPages) ? 'disabled' : '' ?>">Manaraka »</a>
             </div>
         </div>

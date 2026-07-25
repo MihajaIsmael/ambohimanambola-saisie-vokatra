@@ -7,7 +7,7 @@ if (session_status() === PHP_SESSION_NONE) {
 
 // Fallback safety if accessed directly without session data payload
 if (!isset($_SESSION['ticket_data'])) {
-    header('Location: ../index.php');
+    header('Location: ../');
     exit;
 }
 

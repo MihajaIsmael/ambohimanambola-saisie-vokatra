@@ -1,0 +1,10 @@
+# URL Rewriting
+RewriteEngine On
+
+# If the requested URL does not match an existing file...
+RewriteCond %{REQUEST_FILENAME} !-f
+# ...and does not match an existing directory
+RewriteCond %{REQUEST_FILENAME} !-d
+
+# Then, redirect everything to index.php passing the requested URL
+RewriteRule ^(.*)$ index.php [QSA,L]

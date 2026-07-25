@@ -1,6 +1,8 @@
 <?php
 // controllers/MpivavakaController.php
 
+// Note: vendor/autoload.php is already included by index.php, 
+// but we keep this safely scoped just in case.
 include_once __DIR__ . '/../../vendor/autoload.php';
 
 header('Content-Type: application/json');
@@ -10,8 +12,15 @@ $mongoClient = new MongoDB\Client($_ENV['MONGO_URI'] ?? 'mongodb://localhost:270
 $db = $mongoClient->selectDatabase($_ENV['DB_NAME'] ?? 'ruko-database');
 $usersCollection = $db->selectCollection($_ENV['COLLECTION_USERS']);
 
-// Route requests based on the designated 'action' parameter
-$action = array_get_default($_REQUEST, 'action');
+// OPTIMIZATION: Map the clean REST route to the internal controller action (from index.php)
+$action = '';
+if (isset($route)) {
+    if ($route === '/mpivavaka/search') {
+        $action = 'search';
+    } elseif ($route === '/mpivavaka/create') {
+        $action = 'create';
+    }
+}
 
 try {
     switch ($action) {

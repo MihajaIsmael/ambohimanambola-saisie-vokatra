@@ -8,7 +8,7 @@ use App\Services\BarcodeService;
 
 // Only allow POST requests to access this script
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-    header('Location: ../../index.php');
+    header('Location: ../');
     exit;
 }
 
