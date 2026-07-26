@@ -1,0 +1,28 @@
+name: Qualité du code (PHPStan)
+
+on:
+  push:
+    branches: [ "master", "feat/ci-cd" ]
+  pull_request:
+    branches: [ "master", "feat/ci-cd" ]
+
+jobs:
+  phpstan:
+    name: PHPStan Static Analysis
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Récupérer le code source
+        uses: actions/checkout@v4
+
+      - name: Configuration de PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          tools: phpstan
+
+      - name: Instal Composer dependecies
+        run: composer install --prefer-dist --no-progress
+
+      - name: Run PHPStan
+        run: vendor/bin/phpstan analyse
