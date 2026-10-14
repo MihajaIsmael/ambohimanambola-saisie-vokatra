@@ -8,7 +8,14 @@ $settingsCollection = $db->selectCollection('settings');
 
 // 1. Handle filters and pagination values
 $selectedEventId = array_get_default($_GET, 'filter_event_id', '');
-$perPage = (int) array_get_default($_GET, 'per_page', 25); // Default to 25 rows
+if (!is_string($selectedEventId) || !preg_match('/^[a-f0-9]{24}$/i', $selectedEventId)) {
+    $selectedEventId = '';
+}
+
+$perPage = (int) array_get_default($_GET, 'per_page', 25);
+if (!in_array($perPage, [10, 25, 50, 100], true)) {
+    $perPage = 25;
+}
 $currentPage = (int) array_get_default($_GET, 'page', 1);
 if ($currentPage < 1) $currentPage = 1;
 

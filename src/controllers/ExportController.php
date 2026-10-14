@@ -7,17 +7,20 @@ try {
     $db = $mongoClient->selectDatabase($_ENV['DB_NAME']);
     $collection = $db->selectCollection($_ENV['COLLECTION_NAME'] ?? 'vokatra');
 
-    $eventId = array_get_default($_GET, 'event_id', '');
+    // Identifiant fourni par le routeur (index.php) ; absent ou null = export global
+    $eventSettingId = (isset($eventId) && is_string($eventId) && preg_match('/^[a-f0-9]{24}$/i', $eventId))
+        ? $eventId
+        : '';
+
     $filter = [];
     $filename = "export_vokatra_global_" . date('Ymd_His') . ".csv";
 
-    // Filter event
-    if (! empty($eventId)) {
-        $filter['event_id'] = $eventId;
-        $filename = "export_vokatra_event_" . $eventId . "_" . date('Ymd_His') . ".csv";
+    if ($eventSettingId !== '') {
+        $filter['event_setting_id'] = new MongoDB\BSON\ObjectId($eventSettingId);
+        $filename = "export_vokatra_event_" . $eventSettingId . "_" . date('Ymd_His') . ".csv";
     }
 
-    // Extract data sorted by print date
+    // Extraction triée par date d'impression
     $cursor = $collection->find($filter, ['sort' => ['printed_at' => -1]]);
 
     // Headers configuration to force CSV file download
