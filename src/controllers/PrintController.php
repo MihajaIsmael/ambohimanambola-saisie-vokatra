@@ -6,6 +6,16 @@ include_once __DIR__ . '/../../vendor/autoload.php';
 
 use App\Services\BarcodeService;
 
+function printFail(string $message, int $status = 422)
+{
+    http_response_code($status);
+    echo '<!DOCTYPE html><meta charset="UTF-8"><body style="font-family:sans-serif;padding:20px">'
+       . '<h3 style="color:#c0392b">Enregistrement impossible, rien n\'a été imprimé</h3>'
+       . '<p>' . htmlspecialchars($message) . '</p>'
+       . '<button onclick="window.close()">Fermer</button></body>';
+    exit;
+}
+
 // Only allow POST requests to access this script
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     header('Location: ../');
@@ -25,59 +35,90 @@ $labelsToPrint = [];
 $itemCounter = 1;
 $productCounter = 1;
 
-// 2. Process products input matrix and generate data
-$mongoClient = new MongoDB\Client($_ENV['MONGO_URI'] ?? 'mongodb://localhost:27017');
-$db = $mongoClient->selectDatabase($_ENV['DB_NAME']);
-// Récupérer les données de l'événement spécifique depuis MongoDB
-$settingsCollection = $db->selectCollection('settings');
-$globalSettings = $settingsCollection->findOne(['_id' => $eventSettingId]);
-$eventName = $globalSettings['event_name'];
-$eventId = $globalSettings['event_id'];
-
-foreach ($productsInput as $product) {
-    $receiptProducts[] = [
-        'name' => array_get_default($product, 'name', 'Unknown'),
-        'qty'  => (int) array_get_default($product, 'qty', 0),
-        'price'  => (float) array_get_default($product, 'price', 0),
-    ];
-
-    $generatedLabels = BarcodeService::generateProductLabels($product, $userId, $productCounter, (array)$globalSettings);
-    $labelsToPrint = array_merge($labelsToPrint, $generatedLabels);
+// 2. Validation côté serveur
+if (!ctype_digit((string) $userId) || (int) $userId < 1) {
+    printFail('Aucun mpivavaka sélectionné.');
+}
+if (!$eventSettingId) {
+    printFail('Aucun événement sélectionné.');
+}
+if (!is_array($productsInput) || empty($productsInput)) {
+    printFail('Aucun produit saisi.');
 }
 
-// 3. MongoDB Persistence Layer
-if (! empty($labelsToPrint)) {
-    try {
-        // Establish connection to MongoDB
-        $collection = $db->selectCollection($_ENV['COLLECTION_NAME']);
-
-        $documentsToInsert = [];
-        foreach ($labelsToPrint as $label) {
-            $documentsToInsert[] = [
-                'barcode'      => $label['barcode'],      // 13 digits string
-                'product_code' => $label['product_code'], // 7 digits string
-                'name'         => $label['name'],         // Product label / designation
-                'price'        => (float) $label['price'], // Price numeric
-                'printed_at'   => new MongoDB\BSON\UTCDateTime(),
-                'user_id'      => $userId,
-                'user_name'    => $userName,
-                'event_id'     => $eventId,
-                'event_setting_id' => $eventSettingId,
-                'event_name'   => $eventName,
-            ];
-        }
-
-        // Use 'ordered' => false so MongoDB continues inserting even if a duplicate barcode is hit
-        $collection->insertMany($documentsToInsert, ['ordered' => false]);
-
-    } catch (\MongoDB\Exception\BulkWriteException $e) {
-        // A BulkWriteException is expected if a barcode already exists due to the unique index.
-        // We catch it silently so the user still gets their print view without a crash.
-        error_log("Some barcodes were already saved: " . $e->getMessage());
-    } catch (\Throwable $e) {
-        // General fallback for network or connection issues
-        error_log("General MongoDB error: " . $e->getMessage());
+$totalLabels = 0;
+foreach ($productsInput as $product) {
+    if (!is_array($product)) {
+        printFail('Données produit invalides.');
     }
+    $qty = (int) array_get_default($product, 'qty', 0);
+    if ($qty < 1) {
+        printFail('Quantité invalide.');
+    }
+    $totalLabels += $qty;
+}
+if ($totalLabels > BarcodeService::MAX_LABELS_PER_MEMBER) {
+    printFail('Trop d\'étiquettes pour une seule saisie (maximum ' . BarcodeService::MAX_LABELS_PER_MEMBER . ').');
+}
+
+$mongoClient = new MongoDB\Client($_ENV['MONGO_URI'] ?? 'mongodb://localhost:27017');
+$db = $mongoClient->selectDatabase($_ENV['DB_NAME']);
+
+$globalSettings = $db->selectCollection('settings')->findOne(['_id' => $eventSettingId]);
+if (!$globalSettings) {
+    printFail('Événement introuvable.');
+}
+$eventName = $globalSettings['event_name'];
+$eventId   = $globalSettings['event_id'];
+
+// 3. Réservation atomique des numéros (clé = préfixe du product_code)
+try {
+    $counterKey     = $eventId . str_pad($userId, 4, '0', STR_PAD_LEFT);
+    $productCounter = BarcodeService::reserveSequence($db->selectCollection('counters'), $counterKey, $totalLabels);
+} catch (\OverflowException $e) {
+    printFail($e->getMessage());
+} catch (\Throwable $e) {
+    error_log('Counter error: ' . $e->getMessage());
+    printFail('Base de données indisponible, réessayez.', 500);
+}
+
+// 4. Génération des étiquettes
+$receiptProducts = [];
+$labelsToPrint   = [];
+foreach ($productsInput as $product) {
+    $receiptProducts[] = [
+        'name'  => array_get_default($product, 'name', 'Unknown'),
+        'qty'   => (int) array_get_default($product, 'qty', 0),
+        'price' => (float) array_get_default($product, 'price', 0),
+    ];
+    $labelsToPrint = array_merge(
+        $labelsToPrint,
+        BarcodeService::generateProductLabels($product, $userId, $productCounter, (array) $globalSettings)
+    );
+}
+
+// 5. Persistance : si ça échoue, on n'imprime pas
+try {
+    $collection = $db->selectCollection($_ENV['COLLECTION_NAME']);
+    $documentsToInsert = [];
+    foreach ($labelsToPrint as $label) {
+        $documentsToInsert[] = [
+            'barcode'          => $label['barcode'],
+            'product_code'     => $label['product_code'],
+            'name'             => $label['name'],
+            'price'            => (float) $label['price'],
+            'printed_at'       => new MongoDB\BSON\UTCDateTime(),
+            'user_id'          => $userId,
+            'user_name'        => $userName,
+            'event_id'         => $eventId,
+            'event_setting_id' => $eventSettingId,
+            'event_name'       => $eventName,
+        ];
+    }
+    $collection->insertMany($documentsToInsert);
+} catch (\Throwable $e) {
+    error_log('Insert error: ' . $e->getMessage());
+    printFail('Les codes n\'ont pas pu être enregistrés. Réessayez.', 500);
 }
 
 // 4. Session Persistence and Pattern POST-Redirect-GET

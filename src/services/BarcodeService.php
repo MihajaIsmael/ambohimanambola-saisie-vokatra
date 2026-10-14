@@ -12,6 +12,9 @@ include_once __DIR__ . '/../../vendor/autoload.php';
  */
 class BarcodeService
 {
+
+    public const MAX_LABELS_PER_MEMBER = 99;
+
     /**
      * Generate labels in a vast and dynamic way
      * 
@@ -59,6 +62,34 @@ class BarcodeService
         }
 
         return $labels;
+    }
+
+    /**
+     * Réserve atomiquement $count numéros et retourne le premier de la plage.
+     * 
+     * @return int
+     * 
+     * @throws \OverflowException si la limite du code-barres est dépassée
+     */
+    public static function reserveSequence(\MongoDB\Collection $counters, string $key, int $count): int
+    {
+        $doc = $counters->findOneAndUpdate(
+            ['_id' => $key],
+            ['$inc' => ['seq' => $count]],
+            [
+                'upsert'         => true,
+                'returnDocument' => \MongoDB\Operation\FindOneAndUpdate::RETURN_DOCUMENT_AFTER,
+            ]
+        );
+
+        $last = (int) $doc['seq'];
+        if ($last > self::MAX_LABELS_PER_MEMBER) {
+            throw new \OverflowException(
+                'Limite de ' . self::MAX_LABELS_PER_MEMBER . ' étiquettes atteinte pour ce mpivavaka.'
+            );
+        }
+
+        return $last - $count + 1;
     }
 
     /**
