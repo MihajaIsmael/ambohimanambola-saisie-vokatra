@@ -43,6 +43,10 @@ if (preg_match('#^/vokatra/export/event(?:/([0-9a-fA-F]{24}))?/?$#', $route, $ma
             include_once 'src/controllers/MpivavakaController.php';
             break;
 
+        case '/reprint':
+            include_once 'src/controllers/ReprintController.php';
+            break;
+
         default:
             http_response_code(404);
             include 'views/error404.php';

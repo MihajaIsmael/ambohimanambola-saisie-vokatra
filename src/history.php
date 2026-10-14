@@ -311,46 +311,58 @@ if (!empty($aggregationResult)) {
             </div>
         </form>
 
-        <div class="table-responsive">
-            <table>
-                <thead>
-                    <tr>
-                        <th>Code-barres (p.barcode)</th>
-                        <th>Réf.* (p.ref)</th>
-                        <th>Libellé* (p.label)</th>
-                        <th>Prix HT / TTC</th>
-                        <th>Nanome* (extra.nanome)</th>
-                        <th>Produit* (ps.fk_product)</th>
-                        <th>Fotoana (extra.fotoana)</th>
-                        <th class="text-center">Type / Vente / Achat</th>
-                        <th class="text-center">Entrepôt</th>
-                        <th class="text-center">Stock</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <?php if ($totalItems === 0): ?>
+        <form method="POST" action="/reprint" target="_blank" id="reprint-form">
+            <div style="display:flex; justify-content:flex-end; align-items:center; gap:12px; margin-bottom:10px;">
+                <span id="selected-count" style="color:#fff; font-weight:bold;">0 sélectionné</span>
+                <button type="submit" id="reprint-btn" class="btn btn-primary" disabled>🖨️ Réimprimer (0)</button>
+            </div>
+            <div class="table-responsive">
+                <table>
+                    <thead>
                         <tr>
-                            <td colspan="10" style="text-align: center; color: #7f8c8d; padding: 30px;">Tsy misy vokatra voasoratra ho an'ity fotoana ity.</td>
+                            <th style="width:36px;"><input type="checkbox" id="select-all" title="Tout sélectionner (cette page)"></th>
+                            <th>Code-barres (p.barcode)</th>
+                            <th>Réf.* (p.ref)</th>
+                            <th>Libellé* (p.label)</th>
+                            <th>Prix HT / TTC</th>
+                            <th>Nanome* (extra.nanome)</th>
+                            <th>Produit* (ps.fk_product)</th>
+                            <th>Fotoana (extra.fotoana)</th>
+                            <th class="text-center">Type / Vente / Achat</th>
+                            <th class="text-center">Entrepôt</th>
+                            <th class="text-center">Stock</th>
                         </tr>
-                    <?php else: ?>
-                        <?php foreach ($vokatraList as $vokatra): ?>
+                    </thead>
+                    <tbody>
+                        <?php if ($totalItems === 0): ?>
                             <tr>
-                                <td class="mono"><?= htmlspecialchars($vokatra['barcode'] ?? '') ?></td>
-                                <td class="mono" style="color: #7f8c8d;"><?= htmlspecialchars($vokatra['product_code'] ?? '') ?></td>
-                                <td style="font-weight: bold;"><?= strtoupper(htmlspecialchars($vokatra['name'] ?? '')) ?></td>
-                                <td><strong><?= number_format($vokatra['price'] ?? 0, 0, '.', ' ') ?> MGA</strong></td>
-                                <td><?= htmlspecialchars($vokatra['user_name'] ?? '') ?></td>
-                                <td style="color: #95a5a6; font-style: italic;">type-uniq-id</td>
-                                <td><?= htmlspecialchars($vokatra['event_name'] ?? '') ?></td>
-                                <td class="text-center" style="color: #7f8c8d;">0 / 1 / 0</td>
-                                <td class="text-center">1</td>
-                                <td class="text-center" style="font-weight: bold; color: #2ecc71;">1</td>
+                                <td colspan="11" style="text-align: center; color: #7f8c8d; padding: 30px;">Tsy misy vokatra voasoratra ho an'ity fotoana ity.</td>
                             </tr>
-                        <?php endforeach; ?>
-                    <?php endif; ?>
-                </tbody>
-            </table>
-        </div>
+                        <?php else: ?>
+                            <?php foreach ($vokatraList as $vokatra): ?>
+                                <tr>
+                                    <td class="text-center"><input type="checkbox" class="row-check" name="ids[]" value="<?= (string) $vokatra['_id'] ?>"></td>
+                                    <td class="mono"><?= htmlspecialchars($vokatra['barcode'] ?? '') ?>
+                                        <?php if (!empty($vokatra['reprint_count'])): ?>
+                                            <span title="Réimprimé" style="color:#e67e22; font-size:11px;">↻<?= (int) $vokatra['reprint_count'] ?></span>
+                                        <?php endif; ?>
+                                    </td>
+                                    <td class="mono" style="color: #7f8c8d;"><?= htmlspecialchars($vokatra['product_code'] ?? '') ?></td>
+                                    <td style="font-weight: bold;"><?= strtoupper(htmlspecialchars($vokatra['name'] ?? '')) ?></td>
+                                    <td><strong><?= number_format($vokatra['price'] ?? 0, 0, '.', ' ') ?> MGA</strong></td>
+                                    <td><?= htmlspecialchars($vokatra['user_name'] ?? '') ?></td>
+                                    <td style="color: #95a5a6; font-style: italic;">type-uniq-id</td>
+                                    <td><?= htmlspecialchars($vokatra['event_name'] ?? '') ?></td>
+                                    <td class="text-center" style="color: #7f8c8d;">0 / 1 / 0</td>
+                                    <td class="text-center">1</td>
+                                    <td class="text-center" style="font-weight: bold; color: #2ecc71;">1</td>
+                                </tr>
+                            <?php endforeach; ?>
+                        <?php endif; ?>
+                    </tbody>
+                </table>
+            </div>
+        </form>
 
         <div class="pagination-bar">
             <div style="font-size: 13px; color: #7f8c8d;">
@@ -377,7 +389,33 @@ if (!empty($aggregationResult)) {
             </div>
         </div>
     </div>
+    <script>
+    (function () {
+        const selectAll = document.getElementById('select-all');
+        const btn = document.getElementById('reprint-btn');
+        const counter = document.getElementById('selected-count');
+        const checks = () => Array.from(document.querySelectorAll('.row-check'));
 
+        function refresh() {
+            const all = checks();
+            const n = all.filter(c => c.checked).length;
+            btn.disabled = n === 0;
+            btn.textContent = '🖨️ Réimprimer (' + n + ')';
+            counter.textContent = n + ' sélectionné' + (n > 1 ? 's' : '');
+            selectAll.checked = all.length > 0 && n === all.length;
+            selectAll.indeterminate = n > 0 && n < all.length;
+        }
+
+        selectAll.addEventListener('change', function () {
+            checks().forEach(c => c.checked = selectAll.checked);
+            refresh();
+        });
+        document.addEventListener('change', function (e) {
+            if (e.target.classList.contains('row-check')) refresh();
+        });
+        refresh();
+    })();
+    </script>
 </body>
 
 </html>
