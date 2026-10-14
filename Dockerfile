@@ -34,6 +34,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && docker-php-ext-enable mongodb
 
 RUN a2enmod rewrite
+RUN echo "date.timezone=Indian/Antananarivo" > /usr/local/etc/php/conf.d/timezone.ini
+
+COPY docker/apache-security.conf /etc/apache2/conf-available/app-security.conf
+RUN a2enconf app-security
 
 WORKDIR /var/www/html
 
