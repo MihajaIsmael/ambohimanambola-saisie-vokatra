@@ -36,6 +36,23 @@ document.addEventListener('DOMContentLoaded', function () {
         document.getElementById('eventModal').style.display = 'flex';
     }
 
+    // --- Lien vers l'historique : filtré sur l'événement sélectionné ---
+    const historyLink = document.getElementById('history-link');
+
+    function syncHistoryLink() {
+        if (!historyLink || !selectEvent) return;
+        const id = selectEvent.value;
+        historyLink.href = id
+            ? `/vokatra?filter_event_id=${encodeURIComponent(id)}`
+            : '/vokatra';
+
+    }
+
+    if (selectEvent) {
+        selectEvent.addEventListener('change', syncHistoryLink);
+        syncHistoryLink();
+    }
+
     // --- 2. DYNAMIC ROWS OPERATIONS ---
     if (addRowBtn) {
         addRowBtn.addEventListener('click', function () {

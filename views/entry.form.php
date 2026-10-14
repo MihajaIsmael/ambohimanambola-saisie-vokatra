@@ -297,7 +297,9 @@
             <div class="sidebar">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; border-bottom: 2px solid #f4f4f9; padding-bottom: 10px;">
                     <h4 style="margin: 0; color: #2c3e50;">Ireo voaray farany</h4>
-                    <a href="/vokatra" style="font-size: 13px; color: #3498db; text-decoration: none; font-weight: bold;">Vokatra rehetra →</a>
+                    <a id="history-link"
+                        href="/vokatra<?= $selectedEventId !== '' ? '?filter_event_id=' . urlencode($selectedEventId) : '' ?>"
+                        style="font-size: 13px; color: #3498db; text-decoration: none; font-weight: bold;">Vokatra rehetra →</a>
                 </div>
 
                 <ul id="latest-scans-list" style="list-style: none; padding: 0; margin: 0;">
